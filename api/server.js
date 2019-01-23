@@ -16,7 +16,7 @@ server.use(helmet());
 function generateToken(user) {
   const payload = {
     username: user.username,
-    name: user.name
+    department: ["admin", "marketing", "janitorial"]
   };
   const secret = process.env.JWT_SECRET;
 
@@ -43,6 +43,16 @@ function lock(req, res, next) {
   }
 }
 
+function checkRole(department) {
+  return function(req, res, next) {
+    if (req.decodedToken.department.includes(department)) {
+      next();
+    } else {
+      res.status(403).json({ message: `you need to be in ${department}` });
+    }
+  };
+}
+
 server.get("/", (req, res) => {
   res.send("server is alive, now make it secret and safe");
 });
@@ -55,19 +65,22 @@ server.post("/api/register", (req, res) => {
   db("users")
     .insert(userInfo)
     .then(ids => {
-      res.status(201).json(ids);
+      // const token = generateToken(ids);
+      res.status(201).json({ ids });
     })
-    .catch(err => res.status(500).json(err));
+    .catch(err =>
+      res.status(500).json({ message: "register went wrong, bro" })
+    );
 });
 
 server.post("/api/login", (req, res) => {
   const cred = req.body;
 
   db("users")
-    .where({ username: ClientRectList.username })
+    .where({ username: cred.username })
     .first()
     .then(user => {
-      if (user && bcrypt.compareSync(creds.password, user.password)) {
+      if (user && bcrypt.compareSync(cred.password, user.password)) {
         const token = generateToken(user);
         res.status(200).json({ message: `welcome ${user.username}`, token });
       } else {
@@ -77,9 +90,10 @@ server.post("/api/login", (req, res) => {
     .catch(err => res.status(500).json({ message: "login failed" }));
 });
 
-server.get("/users", lock, async (req, res) => {
-  const users = await db("users".select("id", "username"));
+server.get("/users", lock, checkRole("marketing"), async (req, res) => {
+  const users = await db("users").select("id", "username");
 
   res.status(200).json({ users, decodedToken: req.decodedToken });
 });
+
 module.exports = server;
