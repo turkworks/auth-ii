@@ -13,6 +13,8 @@ const db = knex(knexConfig.development);
 server.use(express.json());
 server.use(helmet());
 
+//----------------GENERATETOKEN
+
 function generateToken(user) {
   const payload = {
     username: user.username,
@@ -25,6 +27,8 @@ function generateToken(user) {
   };
   return jwt.sign(payload, secret, options);
 }
+
+// -----------------LOCK
 
 function lock(req, res, next) {
   const token = req.headers.authorization;
@@ -43,6 +47,7 @@ function lock(req, res, next) {
   }
 }
 
+//--------------------CHECKROLE
 function checkRole(department) {
   return function(req, res, next) {
     if (req.decodedToken.department.includes(department)) {
@@ -53,9 +58,13 @@ function checkRole(department) {
   };
 }
 
+//--------------------ENDPOINTS
+
 server.get("/", (req, res) => {
   res.send("server is alive, now make it secret and safe");
 });
+
+//_____________REGISTER
 
 server.post("/api/register", (req, res) => {
   const userInfo = req.body;
@@ -65,13 +74,14 @@ server.post("/api/register", (req, res) => {
   db("users")
     .insert(userInfo)
     .then(ids => {
-      // const token = generateToken(ids);
-      res.status(201).json({ ids });
+      res.status(201).json(ids);
     })
     .catch(err =>
       res.status(500).json({ message: "register went wrong, bro" })
     );
 });
+
+//--------------LOGIN
 
 server.post("/api/login", (req, res) => {
   const cred = req.body;
@@ -90,7 +100,9 @@ server.post("/api/login", (req, res) => {
     .catch(err => res.status(500).json({ message: "login failed" }));
 });
 
-server.get("/users", lock, checkRole("marketing"), async (req, res) => {
+//------------USERS
+
+server.get("/api/users", lock, checkRole("marketing"), async (req, res) => {
   const users = await db("users").select("id", "username");
 
   res.status(200).json({ users, decodedToken: req.decodedToken });
