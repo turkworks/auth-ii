@@ -5,11 +5,13 @@ const helmet = require("helmet");
 const knex = require("knex");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const cors = require("cors");
 
 const server = express();
 knexConfig = require("../knexfile");
 const db = knex(knexConfig.development);
 
+server.use(cors());
 server.use(express.json());
 server.use(helmet());
 
@@ -102,10 +104,12 @@ server.post("/api/login", (req, res) => {
 
 //------------USERS
 
-server.get("/api/users", lock, checkRole("marketing"), async (req, res) => {
+server.get("/api/users", async (req, res) => {
   const users = await db("users").select("id", "username");
 
   res.status(200).json({ users, decodedToken: req.decodedToken });
 });
 
 module.exports = server;
+
+//lock, checkRole("marketing"),
